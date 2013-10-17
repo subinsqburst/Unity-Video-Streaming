@@ -12,6 +12,7 @@
 @interface StreamPlayer ()
 {
     MPMoviePlayerController *player;
+    UIActivityIndicatorView* activityIndicator ;
 }
 
 @end
@@ -23,19 +24,63 @@
     self = [super initWithFrame:frame];
     if (self) {
         // Initialization code
+        
+        [self setBackgroundColor:[UIColor blackColor]];
     }
     return self;
 }
 
--(void)playVideo:(NSURL*)url
+-(void)createActivityIndicator
 {
-    [self releasePlayer];
+    activityIndicator = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleWhite];
     
+    CGFloat x = self.frame.size.width / 2;
+    CGFloat y = self.frame.size.height / 2;
+    
+    activityIndicator.center = CGPointMake(x, y);
+    [activityIndicator startAnimating];
+    [self addSubview:activityIndicator];
+}
+
+-(void)removeActivityIndicator
+{
+    if(nil != activityIndicator)
+    {
+        [activityIndicator stopAnimating];
+        [activityIndicator release];
+        activityIndicator = nil;
+    }
+}
+
+-(void)createMoviePlayer:(NSURL*)url
+{
     player = [[MPMoviePlayerController alloc] initWithContentURL:url];
+    [[player view] setHidden:YES];
     [player prepareToPlay];
     [[player view] setFrame:[self bounds]];
     [self addSubview:[player view]];
     [player play];
+    
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(playbackStateChanged)
+                                                 name:MPMoviePlayerPlaybackStateDidChangeNotification object:nil];
+}
+
+-(void)playVideo:(NSURL*)url
+{
+    [self removeActivityIndicator];
+    [self createActivityIndicator];
+    [self releasePlayer];
+    [self createMoviePlayer:url];
+}
+
+-(void)playbackStateChanged
+{
+    if(nil != player && player.playbackState == MPMoviePlaybackStatePlaying)
+    {
+        [[player view] setHidden:NO];
+        [self removeActivityIndicator];
+    }
 }
 
 -(void)releasePlayer
@@ -50,6 +95,7 @@
 -(void)dealloc
 {
     [self releasePlayer];
+    [self removeActivityIndicator];
     [super dealloc];
 }
 
